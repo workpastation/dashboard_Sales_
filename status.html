@@ -1,0 +1,290 @@
+<!doctype html>
+<html lang="ko"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>운영 현황판</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  :root{--bg:#0E1116;--card:#171C24;--line:#252C38;--txt:#F2F5F9;--dim:#8B96A8;
+        --prep:#F5C542;--run:#3DD68C;--due:#FF8A3D;--emg:#FF4D4F;--brand:#4A7DFF}
+  html,body{height:100%}
+  body{background:var(--bg);color:var(--txt);font-family:Pretendard,'Malgun Gothic',-apple-system,system-ui,sans-serif;
+       overflow:hidden;display:flex;flex-direction:column;-webkit-font-smoothing:antialiased}
+  /* 잠금 화면 */
+  #gate{position:fixed;inset:0;background:#0E1116;z-index:999;display:flex;align-items:center;justify-content:center}
+  #gate .box{background:#171C24;border:1px solid #252C38;border-radius:18px;padding:36px 32px;width:340px;text-align:center}
+  #gate h1{font-size:19px;margin-bottom:6px}
+  #gate p{font-size:13px;color:var(--dim);margin-bottom:20px}
+  #gate input{width:100%;padding:12px;margin-bottom:9px;border-radius:9px;border:1px solid #2E3644;
+              background:#0E1116;color:#fff;font-size:14px;font-family:inherit}
+  #gate button{width:100%;padding:12px;border:0;border-radius:9px;background:var(--brand);color:#fff;
+               font-size:14px;font-weight:700;cursor:pointer;font-family:inherit}
+  #gerr{color:var(--emg);font-size:12.5px;height:16px;margin-top:9px}
+  /* 상단 */
+  header{display:flex;align-items:center;gap:20px;padding:14px 26px;border-bottom:1px solid var(--line);flex:0 0 auto}
+  header .t{font-size:27px;font-weight:800;letter-spacing:-.5px}
+  header .today{font-size:19px;color:var(--dim);font-weight:600}
+  header .spacer{flex:1}
+  header .clock{font-size:31px;font-weight:800;font-variant-numeric:tabular-nums}
+  header .upd{font-size:13px;color:var(--dim);text-align:right;line-height:1.5}
+  /* 오늘 요약 */
+  .strip{display:flex;gap:10px;padding:11px 26px;border-bottom:1px solid var(--line);flex:0 0 auto;align-items:center;flex-wrap:wrap}
+  .pill{font-size:18px;font-weight:700;padding:7px 15px;border-radius:999px;background:#1B222D;border:1px solid var(--line)}
+  .pill b{font-size:21px;margin-left:7px}
+  .pill.go b{color:var(--run)} .pill.end b{color:var(--due)} .pill.tot b{color:var(--txt)}
+  /* 비상 */
+  #emg{display:none;background:var(--emg);color:#fff;padding:11px 26px;font-size:21px;font-weight:800;flex:0 0 auto}
+  /* 본문 3열 */
+  main{flex:1;display:grid;grid-template-columns:repeat(3,1fr);gap:14px;padding:14px 20px 18px;min-height:0}
+  .col{display:flex;flex-direction:column;min-height:0}
+  .chd{display:flex;align-items:center;gap:10px;padding:0 4px 10px}
+  .dot{width:13px;height:13px;border-radius:50%}
+  .cname{font-size:22px;font-weight:800}
+  .cnt{font-size:20px;font-weight:800;color:var(--dim);margin-left:auto}
+  .list{flex:1;overflow:hidden;position:relative}
+  .inner{display:flex;flex-direction:column;gap:11px}
+  .card{background:var(--card);border:1px solid var(--line);border-left:5px solid var(--line);
+        border-radius:13px;padding:14px 16px}
+  .card.p{border-left-color:var(--prep)} .card.r{border-left-color:var(--run)} .card.d{border-left-color:var(--due)}
+  .card.emg{border-color:var(--emg);background:#241519}
+  .nm{font-size:26px;font-weight:800;letter-spacing:-.4px;line-height:1.25;display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+  .badge{font-size:14px;font-weight:800;padding:3px 10px;border-radius:7px;background:#232B38;color:var(--dim)}
+  .badge.dday{background:#2A3546;color:#BFD0EA}
+  .badge.soon{background:#4A2A16;color:#FFB37A}
+  .badge.now{background:#4A1A1C;color:#FF9A9C}
+  .svc{font-size:15px;color:var(--brand);font-weight:700;margin-top:5px}
+  .act{font-size:19px;margin-top:8px;line-height:1.4}
+  .blk{font-size:16px;color:#FFB37A;margin-top:6px}
+  .help{font-size:16px;color:#9FC0FF;margin-top:6px}
+  .meta{display:flex;gap:14px;font-size:16px;color:var(--dim);margin-top:9px;flex-wrap:wrap}
+  .empty{color:#5C6675;font-size:17px;padding:14px 4px}
+  #err{display:none;padding:16px 26px;background:#3A1D1F;color:#FFB3B5;font-size:17px;line-height:1.6}
+</style></head><body>
+
+<div id="gate"><div class="box">
+  <h1>운영 현황판</h1><p>ID와 비밀번호를 입력하면 이후 자동으로 열립니다</p>
+  <input id="gid" placeholder="ID" autocomplete="off">
+  <input id="gpw" type="password" placeholder="비밀번호">
+  <button id="gbtn">열기</button><div id="gerr"></div>
+</div></div>
+
+<header>
+  <div class="t">운영 현황판</div><div class="today" id="today"></div>
+  <div class="spacer"></div>
+  <div class="clock" id="clock"></div>
+  <div class="upd">갱신 <span id="upd">—</span><br><span id="nextu"></span></div>
+</header>
+<div class="strip">
+  <div class="pill go">오늘 발송 시작<b id="s-go">0</b></div>
+  <div class="pill end">오늘 마감<b id="s-end">0</b></div>
+  <div class="pill tot">진행 중인 사업장<b id="s-tot">0</b></div>
+  <div class="pill tot">이번 주 마감<b id="s-week">0</b></div>
+</div>
+<div id="emg"></div>
+<div id="err"></div>
+<main>
+  <div class="col"><div class="chd"><span class="dot" style="background:var(--prep)"></span>
+    <span class="cname">운영 준비 중</span><span class="cnt" id="c-p">0</span></div>
+    <div class="list"><div class="inner" id="l-p"></div></div></div>
+  <div class="col"><div class="chd"><span class="dot" style="background:var(--run)"></span>
+    <span class="cname">진행 중</span><span class="cnt" id="c-r">0</span></div>
+    <div class="list"><div class="inner" id="l-r"></div></div></div>
+  <div class="col"><div class="chd"><span class="dot" style="background:var(--due)"></span>
+    <span class="cname">마감 예정</span><span class="cnt" id="c-d">0</span></div>
+    <div class="list"><div class="inner" id="l-d"></div></div></div>
+</main>
+
+<script>
+const ENC = {"s": "yMeVSSLUBJeqFMTCpF8i7A==", "n": "p4w6Uxeff/FRp4e1", "c": "IDkVmW2iLYjBxkiNqyaKMZue0cazJyJPVjhKCITAVlrpJTfFkjThGw0OK7f/LZUjnTClVwqRzIHyKP7VPlwRCJFp9k3iRKnkEq3uFGM2hzs06RhSisQaUckF"};          // 암호화된 시트 정보
+const ITER = 200000;
+const REFRESH = 60;           // 초 — 시트를 다시 읽는 간격
+let CFG = null, tick = REFRESH;
+
+/* ---------- 잠금 해제 ---------- */
+const b64d = s => Uint8Array.from(atob(s), c => c.charCodeAt(0));
+async function unlock(id, pw){
+  const enc = new TextEncoder();
+  const base = await crypto.subtle.importKey('raw', enc.encode(id + ':' + pw), 'PBKDF2', false, ['deriveKey']);
+  const key = await crypto.subtle.deriveKey(
+    {name:'PBKDF2', salt:b64d(ENC.s), iterations:ITER, hash:'SHA-256'},
+    base, {name:'AES-GCM', length:256}, false, ['decrypt']);
+  const plain = await crypto.subtle.decrypt({name:'AES-GCM', iv:b64d(ENC.n)}, key, b64d(ENC.c));
+  return JSON.parse(new TextDecoder().decode(plain));
+}
+async function tryUnlock(id, pw, remember){
+  try{
+    CFG = await unlock(id, pw);
+    if(remember) localStorage.setItem('rp_status_auth', JSON.stringify({id, pw}));
+    document.getElementById('gate').style.display = 'none';
+    start();
+    return true;
+  }catch(e){ return false; }
+}
+document.getElementById('gbtn').onclick = async () => {
+  const id = document.getElementById('gid').value.trim();
+  const pw = document.getElementById('gpw').value.trim();
+  if(!await tryUnlock(id, pw, true)) document.getElementById('gerr').textContent = 'ID 또는 비밀번호가 맞지 않습니다';
+};
+document.getElementById('gpw').addEventListener('keydown', e => { if(e.key === 'Enter') document.getElementById('gbtn').click(); });
+
+/* ---------- 시계 ---------- */
+const W = ['일','월','화','수','목','금','토'];
+function clock(){
+  const d = new Date();
+  document.getElementById('clock').textContent =
+    String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0');
+  document.getElementById('today').textContent =
+    (d.getMonth()+1) + '월 ' + d.getDate() + '일 (' + W[d.getDay()] + ')';
+}
+setInterval(clock, 1000); clock();
+
+/* ---------- 날짜 도우미 ---------- */
+function today0(){ const d = new Date(); d.setHours(0,0,0,0); return d; }
+function parseDate(v){
+  if(!v) return null;
+  if(typeof v === 'string'){
+    const m = v.match(/Date\((\d+),(\d+),(\d+)/);
+    if(m) return new Date(+m[1], +m[2], +m[3]);
+    const s = v.trim().replace(/[.\/]/g, '-').replace(/-+$/, '');
+    const p = s.split('-').map(Number);
+    if(p.length >= 3 && p[0] > 1900) return new Date(p[0], p[1]-1, p[2]);
+  }
+  return null;
+}
+const fmt = d => d ? ((d.getMonth()+1) + '/' + d.getDate()) : '';
+const diffDays = d => Math.round((d - today0()) / 86400000);
+
+/* ---------- 시트 읽기 ---------- */
+async function load(){
+  const url = 'https://docs.google.com/spreadsheets/d/' + CFG.id +
+              '/gviz/tq?tqx=out:json&sheet=' + encodeURIComponent(CFG.tab) + '&headers=1&_=' + Date.now();
+  const res = await fetch(url);
+  if(!res.ok) throw new Error('시트를 읽지 못했습니다 (' + res.status + ')');
+  const t = await res.text();
+  const j = JSON.parse(t.substring(t.indexOf('{'), t.lastIndexOf('}') + 1));
+  const cols = (j.table.cols || []).map(c => (c.label || '').trim());
+  return (j.table.rows || []).map(r => {
+    const o = {};
+    cols.forEach((name, i) => {
+      const cell = r.c ? r.c[i] : null;
+      o[name] = cell ? (cell.f != null ? cell.f : (cell.v != null ? cell.v : '')) : '';
+      if(name.indexOf('일') >= 0 && cell && cell.v) o['_' + name] = cell.v;
+    });
+    return o;
+  });
+}
+
+/* ---------- 그리기 ---------- */
+function card(r, cls){
+  const end = parseDate(r['_마감일'] || r['마감일']);
+  const start = parseDate(r['_시작일'] || r['시작일']);
+  const emg = String(r['비상'] || '').trim() !== '';
+  let dday = '';
+  if(end){
+    const n = diffDays(end);
+    const label = n === 0 ? '오늘 마감' : (n > 0 ? 'D-' + n : n + '일 지남');
+    const k = n <= 0 ? 'now' : (n <= 3 ? 'soon' : 'dday');
+    dday = '<span class="badge ' + k + '">' + label + '</span>';
+  }
+  const period = (start || end)
+    ? '<span>일정 ' + (start ? fmt(start) : '') + (end ? ' ~ ' + fmt(end) : '') + '</span>' : '';
+  const esc = s => String(s == null ? '' : s).replace(/[<>&]/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;'}[c]));
+  return '<div class="card ' + cls + (emg ? ' emg' : '') + '">' +
+    '<div class="nm">' + (emg ? '<span class="badge now">비상</span>' : '') + esc(r['사업장']) + dday + '</div>' +
+    (r['서비스'] ? '<div class="svc">' + esc(r['서비스']) + '</div>' : '') +
+    (r['다음 행동'] ? '<div class="act">→ ' + esc(r['다음 행동']) + '</div>' : '') +
+    (r['막힌 이유'] ? '<div class="blk">멈춤 · ' + esc(r['막힌 이유']) + '</div>' : '') +
+    (r['부서 협조 필요'] ? '<div class="help">협조 · ' + esc(r['부서 협조 필요']) + '</div>' : '') +
+    '<div class="meta">' + period + (r['담당'] ? '<span>' + esc(r['담당']) + '</span>' : '') + '</div>' +
+  '</div>';
+}
+
+function render(rows){
+  rows = rows.filter(r => {
+    const n = String(r['사업장'] || '').trim();
+    return n && n.indexOf('(예시)') !== 0;
+  });
+  const by = s => rows.filter(r => String(r['상태'] || '').trim() === s)
+                      .sort((a, b) => {
+                        const x = parseDate(a['_마감일'] || a['마감일']), y = parseDate(b['_마감일'] || b['마감일']);
+                        if(x && y) return x - y;
+                        return x ? -1 : (y ? 1 : 0);
+                      });
+  const P = by('운영 준비 중'), R = by('진행 중'), D = by('마감 예정');
+  const fill = (id, arr, cls) => {
+    document.getElementById(id).innerHTML =
+      arr.length ? arr.map(r => card(r, cls)).join('') : '<div class="empty">해당 사업장 없음</div>';
+  };
+  fill('l-p', P, 'p'); fill('l-r', R, 'r'); fill('l-d', D, 'd');
+  document.getElementById('c-p').textContent = P.length;
+  document.getElementById('c-r').textContent = R.length;
+  document.getElementById('c-d').textContent = D.length;
+
+  const live = rows.filter(r => String(r['상태'] || '').trim() !== '마감 완료');
+  const t0 = today0().getTime();
+  const cnt = (arr, k) => arr.filter(r => {
+    const d = parseDate(r['_' + k] || r[k]); return d && d.getTime() === t0;
+  }).length;
+  document.getElementById('s-go').textContent = cnt(live, '시작일');
+  document.getElementById('s-end').textContent = cnt(live, '마감일');
+  document.getElementById('s-tot').textContent = live.length;
+  document.getElementById('s-week').textContent = live.filter(r => {
+    const d = parseDate(r['_마감일'] || r['마감일']); if(!d) return false;
+    const n = diffDays(d); return n >= 0 && n <= 7;
+  }).length;
+
+  const em = live.filter(r => String(r['비상'] || '').trim() !== '');
+  const bar = document.getElementById('emg');
+  if(em.length){
+    bar.style.display = 'block';
+    bar.textContent = '⚠ 즉시 확인 — ' + em.map(r => r['사업장']).join('  ·  ');
+  } else bar.style.display = 'none';
+
+  document.getElementById('upd').textContent =
+    new Date().toLocaleTimeString('ko-KR', {hour:'2-digit', minute:'2-digit'});
+  document.getElementById('err').style.display = 'none';
+}
+
+/* ---------- 넘칠 때 천천히 스크롤 ---------- */
+function autoScroll(){
+  document.querySelectorAll('.list').forEach(el => {
+    if(el._t) return;
+    el._t = setInterval(() => {
+      const over = el.scrollHeight - el.clientHeight;
+      if(over <= 4){ el.scrollTop = 0; return; }
+      el._d = el._d || 1;
+      if(el._p > 0){ el._p--; return; }
+      el.scrollTop += el._d;
+      if(el.scrollTop >= over - 1 || el.scrollTop <= 0){ el._d *= -1; el._p = 40; }
+    }, 55);
+  });
+}
+
+async function refresh(){
+  try{ render(await load()); }
+  catch(e){
+    const box = document.getElementById('err');
+    box.style.display = 'block';
+    box.innerHTML = '현황판이 시트를 읽지 못했습니다. (' + e.message + ')<br>' +
+      '시트 → 공유 → <b>링크가 있는 모든 사용자 · 뷰어</b> 로 되어 있는지 확인해 주세요.';
+  }
+}
+function start(){
+  refresh(); autoScroll();
+  setInterval(() => {
+    tick--;
+    document.getElementById('nextu').textContent = tick + '초 후 자동 갱신';
+    if(tick <= 0){ tick = REFRESH; refresh(); }
+  }, 1000);
+  if(navigator.wakeLock) navigator.wakeLock.request('screen').catch(() => {});
+  document.addEventListener('visibilitychange', () => {
+    if(!document.hidden && navigator.wakeLock) navigator.wakeLock.request('screen').catch(() => {});
+  });
+}
+
+/* 저장된 로그인으로 자동 열기 */
+(async () => {
+  const saved = localStorage.getItem('rp_status_auth');
+  if(saved){ const a = JSON.parse(saved); if(await tryUnlock(a.id, a.pw, false)) return; }
+  document.getElementById('gid').focus();
+})();
+</script></body></html>
