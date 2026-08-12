@@ -94,7 +94,7 @@
 </main>
 
 <script>
-const ENC = {"s": "yMeVSSLUBJeqFMTCpF8i7A==", "n": "p4w6Uxeff/FRp4e1", "c": "IDkVmW2iLYjBxkiNqyaKMZue0cazJyJPVjhKCITAVlrpJTfFkjThGw0OK7f/LZUjnTClVwqRzIHyKP7VPlwRCJFp9k3iRKnkEq3uFGM2hzs06RhSisQaUckF"};          // 암호화된 시트 정보
+const ENC = {"s": "Wk/kSqasKnry+vuiH7jt3g==", "n": "ioSLkS3sixnimAGO", "c": "Hk8q8S8pVEcyI4/QeMEK6zdKWsadicthaIUew4hPYeY28xYwVHG/+a5tr4YF9QnwYXSNCxhUE3qrSSNRCblK37Ux49xiWWQZaN9lTjTiwDZb3wFLToUCk31G"};          // 암호화된 시트 정보
 const ITER = 200000;
 const REFRESH = 60;           // 초 — 시트를 다시 읽는 간격
 let CFG = null, tick = REFRESH;
@@ -181,7 +181,7 @@ function card(r, cls){
   let dday = '';
   if(end){
     const n = diffDays(end);
-    const label = n === 0 ? '오늘 마감' : (n > 0 ? 'D-' + n : n + '일 지남');
+    const label = n === 0 ? '오늘 마감' : (n > 0 ? 'D-' + n : (-n) + '일 지남');
     const k = n <= 0 ? 'now' : (n <= 3 ? 'soon' : 'dday');
     dday = '<span class="badge ' + k + '">' + label + '</span>';
   }
